@@ -1,0 +1,14 @@
+{
+  "active_model": "qwen2.5:7b-instruct-q4_K_M",
+  "candidates": [
+    {
+      "name": "qwen2.5:7b-instruct-q4_K_M",
+      "notes": "Default. Strong instruction-following and tool-call reliability at this size. ~4.7GB VRAM."
+    },
+    {
+      "name": "phi4-mini",
+      "notes": "Faster, smaller, still decent at structured/JSON output. Fallback if 7B feels slow."
+    }
+  ],
+  "context_length": 8192
+}
