@@ -1,0 +1,17 @@
+[
+  {
+    "speaker": "me",
+    "text": "hey what time works tmrw",
+    "timestamp": "2026-01-04T10:22:00Z"
+  },
+  {
+    "speaker": "example_contact_name",
+    "text": "maybe 6pm?",
+    "timestamp": "2026-01-04T10:23:00Z"
+  },
+  {
+    "speaker": "me",
+    "text": "yeah works for me",
+    "timestamp": "2026-01-04T10:23:30Z"
+  }
+]
