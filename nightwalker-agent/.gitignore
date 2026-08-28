@@ -1,0 +1,32 @@
+# Secrets — never commit
+.env
+*.key
+*.pem
+
+# Private agent data — never commit
+database/nightwalker.db
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+database/*.json
+database/*.json.migrated
+memory/
+logs/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
