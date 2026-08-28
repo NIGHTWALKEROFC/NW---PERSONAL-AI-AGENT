@@ -4,6 +4,12 @@ agent/brain/model_client.py
 Thin wrapper around the local Ollama HTTP API.
 No cloud calls. No API keys. Talks only to http://localhost:11434 (or
 whatever OLLAMA_HOST is set to) by default.
+
+Phase 5 addition: chat() now accepts an optional `options` dict, passed
+straight through to Ollama (e.g. {"temperature": 0.8}). This lets the
+Phase 5 candidate generator ask for a few differently-toned drafts of
+the same message. Existing callers that don't pass `options` are
+unaffected — it defaults to None and is simply omitted from the request.
 """
 
 import os
@@ -35,11 +41,12 @@ class ModelClient:
         except requests.exceptions.RequestException:
             return False
 
-    def chat(self, messages: list[dict], stream: bool = False) -> dict:
+    def chat(self, messages: list[dict], stream: bool = False, options: dict | None = None) -> dict:
         """
         Send a chat-style request to Ollama.
 
         messages: list of {"role": "system"|"user"|"assistant", "content": str}
+        options: optional dict passed through to Ollama, e.g. {"temperature": 0.8}
         Returns: {"content": str, "elapsed_seconds": float, "raw": dict}
         """
         if not self.is_available():
@@ -53,6 +60,8 @@ class ModelClient:
             "messages": messages,
             "stream": stream,
         }
+        if options:
+            payload["options"] = options
 
         start = time.time()
         try:
