@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}NightWalker Agent{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <h1>NightWalker</h1>
+        <a href="/">Home</a>
+        <a href="/personality">Personality</a>
+        <a href="/memory">Memory</a>
+        <a href="/contacts">Contacts</a>
+        <a href="/tasks">Tasks</a>
+        <a href="/model">Model</a>
+        <a href="/timing">Timing &amp; Pause</a>
+        <a href="/permissions">Permissions</a>
+        <a href="/approvals">Approvals</a>
+        <a href="/security">Security</a>
+        <a href="/simulation">Simulation</a>
+        <a href="/system">System</a>
+        <hr>
+        <p class="nav-note">Not built yet:<br>Platforms, Automations,<br>Scheduler, formal Logs</p>
+    </nav>
+    <main>
+        {% if message %}
+        <div class="flash">{{ message }}</div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
