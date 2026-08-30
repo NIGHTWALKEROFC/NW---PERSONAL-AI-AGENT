@@ -1,31 +1,61 @@
 """
 database/memory_store.py
 
-Three of the six memory layers from the spec:
+Short-term, long-term, and temporary memory layers. As of Phase 8, the
+`content` field in every table here is encrypted at rest (roles,
+categories, timestamps, and memory_layer labels stay plaintext since
+they're needed for filtering/querying — see database/crypto.py for
+exactly what this protects against and what it doesn't).
 
-- short-term: recent conversation turns, stored as rows in
-  conversation_messages with memory_layer='short_term'
-- long-term: important information that should persist, in its own
-  table so it's never accidentally pruned the way short-term is
-- temporary: information with an explicit expiry, auto-purged
-
-Behavioral memory (patterns about how the person communicates) is
-intentionally NOT duplicated here — that's the personality profile
-(agent/personality/profile_store.py), now also backed by this same
-database. Splitting it into a second copy would just create two
-sources of truth that drift apart.
-
-Contact memory and task memory live in their own files
-(contact_store.py, task_store.py) since they have distinct shapes.
+If you have data from before Phase 8, run
+scripts/encrypt_existing_data.py once to encrypt it in place.
 """
 
 import datetime
 
 from database.db import get_connection
+from database.crypto import encrypt_text, decrypt_text
 
 
 def _now() -> str:
     return datetime.datetime.utcnow().isoformat() + "Z"
+
+
+def _decrypt_message_row(row: dict) -> dict:
+    row = dict(row)
+    row["content"] = decrypt_text(row["content"])
+    return row
+
+
+# ---------------------------------------------------------------------------
+# General-purpose message logging
+# ---------------------------------------------------------------------------
+
+def log_message(role: str, content: str, contact_id: int | None = None,
+                 memory_layer: str = "short_term", created_at: str | None = None) -> int:
+    conn = get_connection()
+    cur = conn.execute(
+        "INSERT INTO conversation_messages (contact_id, role, content, memory_layer, created_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (contact_id, role, encrypt_text(content), memory_layer, created_at or _now()),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
+def get_messages_for_contact(contact_id: int, memory_layer: str | None = None) -> list[dict]:
+    conn = get_connection()
+    if memory_layer is None:
+        rows = conn.execute(
+            "SELECT * FROM conversation_messages WHERE contact_id = ? ORDER BY created_at ASC",
+            (contact_id,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM conversation_messages WHERE contact_id = ? AND memory_layer = ? ORDER BY created_at ASC",
+            (contact_id, memory_layer),
+        ).fetchall()
+    return [_decrypt_message_row(r) for r in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -33,22 +63,10 @@ def _now() -> str:
 # ---------------------------------------------------------------------------
 
 def add_short_term_message(role: str, content: str, contact_id: int | None = None) -> int:
-    """
-    role: 'me', 'agent', or a contact's name — whatever the caller uses
-    consistently. Returns the new row's id.
-    """
-    conn = get_connection()
-    cur = conn.execute(
-        "INSERT INTO conversation_messages (contact_id, role, content, memory_layer, created_at) "
-        "VALUES (?, ?, ?, 'short_term', ?)",
-        (contact_id, role, content, _now()),
-    )
-    conn.commit()
-    return cur.lastrowid
+    return log_message(role, content, contact_id=contact_id, memory_layer="short_term")
 
 
 def get_recent_short_term(limit: int = 20, contact_id: int | None = None) -> list[dict]:
-    """Returns the most recent messages, oldest first (ready to feed into a chat history list)."""
     conn = get_connection()
     if contact_id is None:
         rows = conn.execute(
@@ -62,11 +80,10 @@ def get_recent_short_term(limit: int = 20, contact_id: int | None = None) -> lis
             "ORDER BY id DESC LIMIT ?",
             (contact_id, limit),
         ).fetchall()
-    return [dict(r) for r in reversed(rows)]
+    return [_decrypt_message_row(r) for r in reversed(rows)]
 
 
 def clear_short_term(contact_id: int | None = None) -> int:
-    """Deletes short-term messages. Returns the number of rows deleted."""
     conn = get_connection()
     if contact_id is None:
         cur = conn.execute("DELETE FROM conversation_messages WHERE memory_layer = 'short_term' AND contact_id IS NULL")
@@ -84,7 +101,7 @@ def add_long_term_memory(content: str, category: str = "general", importance: fl
     conn = get_connection()
     cur = conn.execute(
         "INSERT INTO long_term_memory (category, content, importance, source, created_at) VALUES (?, ?, ?, ?, ?)",
-        (category, content, importance, source, _now()),
+        (category, encrypt_text(content), importance, source, _now()),
     )
     conn.commit()
     return cur.lastrowid
@@ -98,7 +115,7 @@ def get_long_term_memory(category: str | None = None) -> list[dict]:
         rows = conn.execute(
             "SELECT * FROM long_term_memory WHERE category = ? ORDER BY importance DESC, id DESC", (category,)
         ).fetchall()
-    return [dict(r) for r in rows]
+    return [_decrypt_message_row(r) for r in rows]
 
 
 def delete_long_term_memory(entry_id: int) -> bool:
@@ -118,23 +135,21 @@ def add_temporary_memory(content: str, ttl_seconds: int) -> int:
     conn = get_connection()
     cur = conn.execute(
         "INSERT INTO temporary_memory (content, created_at, expires_at) VALUES (?, ?, ?)",
-        (content, now.isoformat() + "Z", expires_at),
+        (encrypt_text(content), now.isoformat() + "Z", expires_at),
     )
     conn.commit()
     return cur.lastrowid
 
 
 def get_active_temporary_memory() -> list[dict]:
-    """Returns only non-expired entries. Does not delete expired ones — call purge_expired_temporary_memory() for that."""
     conn = get_connection()
     rows = conn.execute(
         "SELECT * FROM temporary_memory WHERE expires_at > ? ORDER BY id DESC", (_now(),)
     ).fetchall()
-    return [dict(r) for r in rows]
+    return [_decrypt_message_row(r) for r in rows]
 
 
 def purge_expired_temporary_memory() -> int:
-    """Deletes expired entries. Returns the number removed."""
     conn = get_connection()
     cur = conn.execute("DELETE FROM temporary_memory WHERE expires_at <= ?", (_now(),))
     conn.commit()
