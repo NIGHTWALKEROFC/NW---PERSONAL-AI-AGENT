@@ -1,0 +1,12 @@
+{
+  "min_delay_seconds": 15,
+  "max_delay_seconds": 900,
+  "active_hours": {"start": "08:00", "end": "23:00"},
+  "sleep_hours": {"start": "00:00", "end": "07:00"},
+  "busy_hours": [
+    {"start": "09:00", "end": "12:00", "label": "class/study block"}
+  ],
+  "busy_hours_delay_multiplier": 3.0,
+  "cold_start_default_delay_seconds": 120,
+  "min_history_samples_for_contact": 5
+}
