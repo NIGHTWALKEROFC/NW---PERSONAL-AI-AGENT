@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Contacts — NightWalker{% endblock %}
+{% block content %}
+<h2>Contacts</h2>
+
+<div class="card">
+    {% if contacts %}
+    <table>
+        <tr><th>Name</th><th>Platform</th><th>Relationship</th><th></th></tr>
+        {% for c in contacts %}
+        <tr>
+            <td>{{ c.name }}</td>
+            <td class="muted">{{ c.platform or '—' }}</td>
+            <td class="muted">{{ c.relationship_context or '—' }}</td>
+            <td><a href="/contacts/{{ c.id }}" style="color:#7dd3fc;">view</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="not-built">No contacts yet — import a conversation to create one automatically.</p>
+    {% endif %}
+</div>
+{% endblock %}
