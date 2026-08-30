@@ -1,14 +1,15 @@
 """
 database/db.py
 
-Single SQLite database for the entire memory architecture:
-short-term, long-term, contact, task, and temporary memory, plus the
-personality profile, sensitive-information flags, and the corrections
-log (all previously separate JSON files in Phase 2-3 — now one file,
-one place to eventually encrypt in Phase 8).
+Single SQLite database for the entire memory architecture. As of
+Phase 8, sensitive content fields in this database are encrypted at
+the application level before being written — see database/crypto.py
+for exactly what that does and doesn't protect against. The schema
+itself is unchanged by that (still plain TEXT columns); encryption
+happens in the store modules, not here.
 
-Every consumer should go through get_connection() rather than opening
-the file directly, so schema initialization is guaranteed to have run.
+Phase 8 additions to the schema: pending_approvals (the approval
+queue) and security_events (a simple audit log).
 """
 
 import os
@@ -95,11 +96,37 @@ CREATE TABLE IF NOT EXISTS task_memory (
     expires_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS agent_state (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pending_approvals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action_type TEXT NOT NULL,
+    contact_id INTEGER,
+    payload TEXT NOT NULL,
+    reasoning TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL,
+    resolved_at TEXT,
+    FOREIGN KEY (contact_id) REFERENCES contacts(id)
+);
+
+CREATE TABLE IF NOT EXISTS security_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT NOT NULL,
+    detail TEXT,
+    created_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_conversation_messages_contact ON conversation_messages(contact_id);
 CREATE INDEX IF NOT EXISTS idx_conversation_messages_layer ON conversation_messages(memory_layer);
 CREATE INDEX IF NOT EXISTS idx_contact_memories_contact ON contact_memories(contact_id);
 CREATE INDEX IF NOT EXISTS idx_temporary_memory_expires ON temporary_memory(expires_at);
 CREATE INDEX IF NOT EXISTS idx_task_memory_status ON task_memory(status);
+CREATE INDEX IF NOT EXISTS idx_pending_approvals_status ON pending_approvals(status);
 """
 
 
