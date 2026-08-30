@@ -1,0 +1,16 @@
+{
+  "read_notifications": "AUTO",
+  "read_messages": "AUTO",
+  "generate_reply": "AUTO",
+  "send_normal_reply": "AUTO",
+  "story_related_action": "ASK",
+  "like_react": "ASK",
+  "follow_unfollow": "NEVER",
+  "posting": "ASK",
+  "account_settings": "NEVER",
+  "delete_messages": "NEVER",
+  "delete_files": "NEVER",
+  "payments": "NEVER",
+  "password_changes": "NEVER",
+  "security_settings": "ASK"
+}
