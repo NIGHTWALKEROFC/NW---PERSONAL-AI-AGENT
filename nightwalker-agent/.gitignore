@@ -2,6 +2,7 @@
 .env
 *.key
 *.pem
+database/secret.key
 
 # Private agent data — never commit
 database/nightwalker.db
