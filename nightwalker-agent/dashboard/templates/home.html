@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Home — NightWalker{% endblock %}
+{% block content %}
+<h2>Agent Status</h2>
+
+<div class="card">
+    <h3>Overview</h3>
+    <div class="stat-grid">
+        <div class="stat">
+            <div class="value">{% if ollama_up %}<span class="badge badge-ok">UP</span>{% else %}<span class="badge badge-danger">DOWN</span>{% endif %}</div>
+            <div class="label">Ollama</div>
+        </div>
+        <div class="stat">
+            <div class="value">{% if paused %}<span class="badge badge-warn">PAUSED</span>{% else %}<span class="badge badge-ok">ACTIVE</span>{% endif %}</div>
+            <div class="label">Agent State</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ active_tasks_count }}</div>
+            <div class="label">Active Tasks</div>
+        </div>
+    </div>
+    {% if paused %}
+    <p class="muted" style="margin-top:16px;">{{ pause_reason }} — manage this on the <a href="/timing" style="color:#7dd3fc;">Timing &amp; Pause</a> page.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Model</h3>
+    <p>Active model: <strong>{{ model_name }}</strong></p>
+    <p class="muted">Change this on the <a href="/model" style="color:#7dd3fc;">Model</a> page.</p>
+</div>
+
+<div class="card">
+    <h3>System resources</h3>
+    <div class="stat-grid">
+        <div class="stat">
+            <div class="value">{{ cpu_percent }}%</div>
+            <div class="label">CPU</div>
+        </div>
+        <div class="stat">
+            <div class="value">{{ ram_percent }}%</div>
+            <div class="label">RAM ({{ ram_used_gb }} / {{ ram_total_gb }} GB)</div>
+        </div>
+    </div>
+    <p class="muted" style="margin-top:12px;">More detail on the <a href="/system" style="color:#7dd3fc;">System</a> page.</p>
+</div>
+
+<div class="card">
+    <h3>Pending approvals</h3>
+    <p class="not-built">Not available yet — there's no permission engine generating approval requests (Phase 8).</p>
+</div>
+
+<div class="card">
+    <h3>Security alerts</h3>
+    <p class="not-built">Not available yet — no security event log exists (Phase 8).</p>
+</div>
+{% endblock %}
