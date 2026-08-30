@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Automation — NightWalker{% endblock %}
+{% block content %}
+<h2>Desktop Automation</h2>
+<p class="muted" style="color:#fca5a5;">The click/type/screenshot code has NOT been tested against a real display by the developer — there was no GUI available while building this. Test carefully, starting with dry-run mode, before trusting real execution with anything that matters.</p>
+
+<div class="card">
+    <h3>Library availability</h3>
+    <p>pyautogui: {% if availability.pyautogui.available %}<span class="badge badge-ok">available</span>{% else %}<span class="badge badge-danger">unavailable</span>{% endif %}</p>
+    {% if not availability.pyautogui.available %}<p class="muted">{{ availability.pyautogui.error }}</p>{% endif %}
+    <p>pygetwindow: {% if availability.pygetwindow.available %}<span class="badge badge-ok">available</span>{% else %}<span class="badge badge-danger">unavailable</span>{% endif %}</p>
+    {% if not availability.pygetwindow.available %}<p class="muted">{{ availability.pygetwindow.error }}</p>{% endif %}
+</div>
+
+<div class="card">
+    <h3>Master Switch</h3>
+    <p class="muted">Separate from per-action permissions — must be ON before ANY real (non-dry-run) desktop action can execute, regardless of permission level.</p>
+    <p>{% if master_enabled %}<span class="badge badge-warn">ON</span>{% else %}<span class="badge badge-ok">OFF (default, safe)</span>{% endif %}</p>
+    <form method="post" action="/automation/toggle-master-switch" onsubmit="return confirm('Are you sure? This affects whether real desktop actions can run.');">
+        <button type="submit" class="{% if not master_enabled %}danger{% endif %}">{% if master_enabled %}Turn OFF{% else %}Turn ON{% endif %}</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Dry-Run Test</h3>
+    <p class="muted">This only simulates the decision chain — nothing real happens, regardless of the master switch.</p>
+    <form method="post" action="/automation/dry-run-test">
+        <select name="action_type">
+            {% for t in action_types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
+        <input type="text" name="name_or_path" placeholder="App name/path (for open_app)">
+        <input type="text" name="x" placeholder="X (for click)">
+        <input type="text" name="y" placeholder="Y (for click)">
+        <input type="text" name="text" placeholder="Text (for type_text)">
+        <input type="text" name="expected_state_description" placeholder="Expected screen state (required for click/type_text)">
+        <button type="submit">Run dry-run test</button>
+    </form>
+</div>
+
+{% if test_result %}
+<div class="card">
+    <h3>Test Result</h3>
+    <p><span class="badge badge-neutral">{{ test_result.status.upper() }}</span></p>
+    {% if test_result.reason %}<p>{{ test_result.reason }}</p>{% endif %}
+    <p><strong>Trace:</strong></p>
+    <ul>{% for step in test_result.trace %}<li class="muted">{{ step }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<div class="card">
+    <h3>Real execution</h3>
+    <p class="muted">Not available from this page by design. Use <code>python scripts/desktop_action_cli.py</code>, which requires an explicit typed confirmation before any real action runs.</p>
+</div>
+{% endblock %}
