@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Platforms — NightWalker{% endblock %}
+{% block content %}
+<h2>Platforms</h2>
+<p class="muted">Each platform is an official-API connector — no scraping, no session automation of personal accounts, no ban-risk automation. See <code>connectors/</code> for how each one works.</p>
+
+<div class="card">
+    {% for p in platforms %}
+    <h3>{{ p.name.title() }}</h3>
+    <p>
+        {% if p.configured %}<span class="badge badge-ok">Configured</span>{% else %}<span class="badge badge-neutral">Not configured</span>{% endif %}
+        &nbsp; {{ p.linked_contacts }} linked contact(s)
+    </p>
+    {% if not p.configured %}
+    <p class="muted">Add credentials in <code>.env</code> to enable this connector — see <code>.env.example</code> for what's needed.</p>
+    {% endif %}
+    <hr>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <h3>Run the Telegram connector</h3>
+    <p class="muted">This page shows status only — starting/stopping the live connector is done from the terminal:</p>
+    <p><code>python scripts/run_telegram_bot.py</code></p>
+</div>
+{% endblock %}
