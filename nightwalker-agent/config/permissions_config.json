@@ -2,15 +2,19 @@
   "read_notifications": "AUTO",
   "read_messages": "AUTO",
   "generate_reply": "AUTO",
-  "send_normal_reply": "AUTO",
+  "send_normal_reply": "ASK",
   "story_related_action": "ASK",
   "like_react": "ASK",
-  "follow_unfollow": "NEVER",
+  "follow_unfollow": "ASK",
   "posting": "ASK",
   "account_settings": "NEVER",
   "delete_messages": "NEVER",
   "delete_files": "NEVER",
   "payments": "NEVER",
   "password_changes": "NEVER",
-  "security_settings": "ASK"
+  "security_settings": "ASK",
+  "desktop_open_app": "ASK",
+  "desktop_click": "DISABLED",
+  "desktop_type": "DISABLED",
+  "desktop_read_screen": "ASK"
 }
