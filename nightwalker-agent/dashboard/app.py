@@ -23,7 +23,7 @@ from fastapi.templating import Jinja2Templates
 from dashboard.routers import (
     home, personality, memory, contacts, tasks, model_router,
     timing_router, system_router, permissions, approvals, security_router,
-    simulation_router,
+    simulation_router, platforms_router,
 )
 
 BASE_DIR = os.path.dirname(__file__)
@@ -46,3 +46,4 @@ app.include_router(permissions.get_router(templates))
 app.include_router(approvals.get_router(templates))
 app.include_router(security_router.get_router(templates))
 app.include_router(simulation_router.get_router(templates))
+app.include_router(platforms_router.get_router(templates))
