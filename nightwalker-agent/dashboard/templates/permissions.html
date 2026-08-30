@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Permissions — NightWalker{% endblock %}
+{% block content %}
+<h2>Permissions</h2>
+<p class="muted">AUTO = happens automatically · ASK = goes to the Approval Center · SUGGEST = proceeds but flagged · DISABLED / NEVER = blocked outright</p>
+
+<div class="card">
+    <table>
+        <tr><th>Action</th><th>Level</th><th></th></tr>
+        {% for action, level in permissions.items() %}
+        <tr>
+            <td>{{ action.replace('_', ' ') }}</td>
+            <td>
+                <span class="badge {% if level == 'AUTO' %}badge-ok{% elif level == 'ASK' or level == 'SUGGEST' %}badge-warn{% else %}badge-danger{% endif %}">{{ level }}</span>
+            </td>
+            <td>
+                <form method="post" action="/permissions/update" class="inline">
+                    <input type="hidden" name="action_type" value="{{ action }}">
+                    <select name="level" onchange="this.form.submit()">
+                        {% for lvl in valid_levels %}
+                        <option value="{{ lvl }}" {% if lvl == level %}selected{% endif %}>{{ lvl }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}
