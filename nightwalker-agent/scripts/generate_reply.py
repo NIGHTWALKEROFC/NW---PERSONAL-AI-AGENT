@@ -2,14 +2,15 @@
 scripts/generate_reply.py
 
 Feed in an incoming message (and optionally a contact name) and see
-the full Phase 5 pipeline run: candidates generated, one selected,
-quality-checked, with reasoning shown at every step.
+the full pipeline run: candidates generated, one selected,
+quality-checked, and (Phase 8) permission-checked.
+
+If the permission level for sending a reply is ASK, this now creates
+a real approval request instead of just showing you the result —
+check it with the dashboard's Approval Center or scripts/approval_cli.py.
 
 Afterward, you're asked what you'd actually send instead. If it's
-different from what the pipeline picked, it's automatically logged as
-a correction (Phase 3's learning mechanism) — so testing this pipeline
-naturally feeds the system real signal, instead of needing a separate
-manual step via log_correction.py.
+different from what the pipeline picked, it's logged as a correction.
 
 Usage:
     python scripts/generate_reply.py
@@ -44,7 +45,7 @@ def main():
 
     contact_name = input("Contact name (press enter to skip): ").strip() or None
 
-    print("\nRunning pipeline (generating candidates, selecting, quality-checking)...\n")
+    print("\nRunning pipeline (generating candidates, selecting, quality-checking, permission-checking)...\n")
     result = generate_reply(incoming, contact_name=contact_name)
 
     print(f"--- Candidates ({len(result['all_candidates'])}) ---")
@@ -54,6 +55,12 @@ def main():
 
     print(f"\nSelection reasoning: {result['selection_reasoning']}")
     print(f"\nStatus: {result['status'].upper()}")
+    if result.get("permission_level"):
+        print(f"Permission level for sending: {result['permission_level']}")
+    if result["status"] == "pending_approval":
+        print(f"An approval request was created (id: {result['approval_id']}) — review it in the dashboard's Approval Center.")
+    if result["status"] == "blocked":
+        print("This reply was blocked — sending is currently DISABLED or NEVER allowed.")
     if result["quality"]["concerns"]:
         print("Concerns raised:")
         for concern in result["quality"]["concerns"]:
