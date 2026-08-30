@@ -1,15 +1,15 @@
 """
 database/db.py
 
-Single SQLite database for the entire memory architecture. As of
-Phase 8, sensitive content fields in this database are encrypted at
-the application level before being written — see database/crypto.py
-for exactly what that does and doesn't protect against. The schema
-itself is unchanged by that (still plain TEXT columns); encryption
-happens in the store modules, not here.
+Single SQLite database for the entire memory architecture. Sensitive
+content fields are encrypted at the application level — see
+database/crypto.py.
 
-Phase 8 additions to the schema: pending_approvals (the approval
-queue) and security_events (a simple audit log).
+Phase 10 addition: contacts gets a new `platform_id` column — the
+platform-specific identifier (e.g. a Telegram chat ID) needed to
+actually send a message to that contact. Existing databases get this
+column added automatically via ALTER TABLE, since CREATE TABLE IF NOT
+EXISTS alone doesn't add columns to a table that already exists.
 """
 
 import os
@@ -129,15 +129,30 @@ CREATE INDEX IF NOT EXISTS idx_task_memory_status ON task_memory(status);
 CREATE INDEX IF NOT EXISTS idx_pending_approvals_status ON pending_approvals(status);
 """
 
+# Columns added after a table already existed in an earlier phase —
+# CREATE TABLE IF NOT EXISTS doesn't retroactively add these, so they're
+# applied explicitly and idempotently (checked against pragma table_info first).
+_COLUMN_MIGRATIONS = [
+    ("contacts", "platform_id", "TEXT"),
+]
+
+
+def _apply_column_migrations(conn: sqlite3.Connection) -> None:
+    for table, column, col_type in _COLUMN_MIGRATIONS:
+        existing_columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        if column not in existing_columns:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+
 
 def get_connection() -> sqlite3.Connection:
     """
-    Returns a connection with schema guaranteed to exist. Safe to call
-    repeatedly — CREATE TABLE IF NOT EXISTS is cheap and idempotent.
+    Returns a connection with schema guaranteed to exist and up to date.
+    Safe to call repeatedly.
     """
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
+    _apply_column_migrations(conn)
     conn.commit()
     return conn
