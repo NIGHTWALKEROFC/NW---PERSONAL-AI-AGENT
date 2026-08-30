@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Personality — NightWalker{% endblock %}
+{% block content %}
+<h2>Personality Profile</h2>
+<p class="muted">Onboarding sessions completed: {{ profile.meta.onboarding_sessions_completed }} — last updated {{ profile.meta.last_updated }}</p>
+
+<div class="card">
+    <h3>Communication Style</h3>
+    <table>
+        {% for key, trait in profile.communication_style.items() %}
+        {% if trait.value %}
+        <tr>
+            <td>{{ key.replace('_', ' ') }}</td>
+            <td>{{ trait.value }}</td>
+            <td style="width:120px;">
+                <span class="confidence-bar" style="width:{{ (trait.confidence * 80)|round }}px;"></span>
+                {{ trait.confidence }}
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </table>
+    {% if not profile.communication_style.values()|selectattr('value')|list %}
+    <p class="not-built">No confirmed traits yet — run onboarding or import conversations.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Behavioral Patterns</h3>
+    <table>
+        {% for key, trait in profile.behavioral_patterns.items() %}
+        {% if trait.value %}
+        <tr>
+            <td>{{ key.replace('_', ' ') }}</td>
+            <td>{{ trait.value }}</td>
+            <td style="width:120px;">
+                <span class="confidence-bar" style="width:{{ (trait.confidence * 80)|round }}px;"></span>
+                {{ trait.confidence }}
+            </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+    </table>
+</div>
+
+<div class="card">
+    <h3>Learned Patterns (from corrections)</h3>
+    {% if profile.learned_patterns %}
+    <ul>
+        {% for p in profile.learned_patterns %}<li>{{ p }}</li>{% endfor %}
+    </ul>
+    {% else %}
+    <p class="not-built">None promoted yet — a pattern needs to repeat 3+ times via corrections first.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Personal Knowledge</h3>
+    {% if profile.personal_knowledge %}
+    <ul>
+        {% for fact in profile.personal_knowledge %}<li>{{ fact.fact }} <span class="muted">({{ fact.source }})</span></li>{% endfor %}
+    </ul>
+    {% else %}
+    <p class="not-built">No facts recorded yet.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Boundaries</h3>
+    {% for boundary_type in ['never_say', 'actions_requiring_approval', 'actions_never_allowed'] %}
+    <p><strong>{{ boundary_type.replace('_', ' ') }}</strong></p>
+    <ul>
+        {% for item in profile.boundaries[boundary_type] %}
+        <li>{{ item }}
+            <form class="inline" method="post" action="/personality/remove-boundary">
+                <input type="hidden" name="boundary_type" value="{{ boundary_type }}">
+                <input type="hidden" name="value" value="{{ item }}">
+                <button type="submit" style="padding:2px 8px;font-size:11px;">remove</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+    <form method="post" action="/personality/add-boundary" style="margin-bottom:16px;">
+        <input type="hidden" name="boundary_type" value="{{ boundary_type }}">
+        <input type="text" name="value" placeholder="Add a new entry...">
+        <button type="submit">Add</button>
+    </form>
+    {% endfor %}
+</div>
+{% endblock %}
