@@ -26,20 +26,37 @@ def _now() -> str:
     return datetime.datetime.utcnow().isoformat() + "Z"
 
 
-def get_or_create_contact(name: str, platform: str | None = None) -> int:
+def get_or_create_contact(name: str, platform: str | None = None, platform_id: str | None = None) -> int:
     conn = get_connection()
     row = conn.execute("SELECT id FROM contacts WHERE name = ?", (name,)).fetchone()
     if row:
+        if platform_id is not None:
+            conn.execute("UPDATE contacts SET platform_id = ? WHERE id = ?", (platform_id, row["id"]))
+            conn.commit()
         return row["id"]
 
     now = _now()
     cur = conn.execute(
-        "INSERT INTO contacts (name, platform, relationship_context, created_at, updated_at) "
-        "VALUES (?, ?, NULL, ?, ?)",
-        (name, platform, now, now),
+        "INSERT INTO contacts (name, platform, platform_id, relationship_context, created_at, updated_at) "
+        "VALUES (?, ?, ?, NULL, ?, ?)",
+        (name, platform, platform_id, now, now),
     )
     conn.commit()
     return cur.lastrowid
+
+
+def get_contact_by_platform_id(platform: str, platform_id: str) -> dict | None:
+    """Looks up a contact by their platform-specific ID (e.g. a Telegram chat ID) — used when an
+    incoming message arrives and needs to be matched to an existing contact record."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM contacts WHERE platform = ? AND platform_id = ?", (platform, platform_id)
+    ).fetchone()
+    if row is None:
+        return None
+    contact = dict(row)
+    contact["relationship_context"] = decrypt_text(contact["relationship_context"])
+    return contact
 
 
 def get_contact_by_name(name: str) -> dict | None:
