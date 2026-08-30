@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Model — NightWalker{% endblock %}
+{% block content %}
+<h2>Model</h2>
+
+<div class="card">
+    <h3>Active Model</h3>
+    <p><strong>{{ active }}</strong> — {% if ollama_up %}<span class="badge badge-ok">Ollama reachable</span>{% else %}<span class="badge badge-danger">Ollama not reachable</span>{% endif %}</p>
+</div>
+
+<div class="card">
+    <h3>Known Candidates</h3>
+    <table>
+        {% for c in candidates %}
+        <tr><td><strong>{{ c.name }}</strong></td><td class="muted">{{ c.notes }}</td></tr>
+        {% endfor %}
+    </table>
+</div>
+
+<div class="card">
+    <h3>Switch Model</h3>
+    <p class="muted">This does not verify the model is actually pulled — run <code>ollama pull &lt;name&gt;</code> yourself first if it's new.</p>
+    <form method="post" action="/model/set-active">
+        <input type="text" name="model_name" placeholder="e.g. phi4-mini">
+        <button type="submit">Set as active</button>
+    </form>
+</div>
+{% endblock %}
