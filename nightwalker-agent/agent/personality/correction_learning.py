@@ -5,24 +5,18 @@ Implements the spec's continuous-learning principle:
     original AI suggestion -> person's edited version -> learn the difference
     one correction = weak signal, repeated pattern = strong signal
 
-Every correction is logged in full (now in the corrections_log table
-in database/nightwalker.db — previously a standalone JSON file) and
-also tagged with short pattern labels (e.g. "adds_emoji",
-"shortens_sentence") by the model. A tag's confidence rises each time
-it recurs, and once a tag has been seen enough times
-(CORRECTION_PROMOTION_THRESHOLD), it gets promoted into
-profile["learned_patterns"] as a plain-language description — this is
-what later phases (reply generation) should actually read from, rather
-than the raw correction log.
+Every correction is logged in the corrections_log table. As of Phase
+8, the original/edited/description text fields are encrypted at rest
+(tags stay plaintext JSON — they're short category labels, not
+personal content, and keeping them readable is harmless). See
+database/crypto.py for what this encryption does and doesn't protect
+against.
 
-Phase 5 (reply generation) doesn't exist yet, so there's no automatic
-place this gets called from yet — scripts/log_correction.py lets you
-feed it corrections manually in the meantime to build up signal and
-test the mechanism ahead of Phase 5 wiring it in for real.
+Phase 5 (reply generation) auto-feeds this via scripts/generate_reply.py.
+scripts/log_correction.py lets you feed it manually too.
 
-If you have an existing database/corrections_log.json from before this
-phase, run scripts/migrate_json_to_sqlite.py once to bring it into the
-database — it is not read automatically.
+If you have data from before Phase 8, run
+scripts/encrypt_existing_data.py once to encrypt it in place.
 """
 
 import datetime
@@ -32,9 +26,8 @@ import re
 from agent.brain.model_client import ModelClient, ModelClientError
 from agent.personality.profile_store import load_profile, save_profile
 from database.db import get_connection
+from database.crypto import encrypt_text, decrypt_text
 
-# How many times a pattern tag must recur before it's promoted into
-# profile["learned_patterns"] as a trusted, plain-language pattern.
 CORRECTION_PROMOTION_THRESHOLD = 3
 
 TAG_EXTRACTION_SYSTEM_PROMPT = """You compare an AI-generated draft message with the version the
@@ -65,19 +58,22 @@ def _log_correction_row(timestamp: str, original: str, edited: str, tags: list[s
     conn = get_connection()
     conn.execute(
         "INSERT INTO corrections_log (timestamp, original, edited, tags, description) VALUES (?, ?, ?, ?, ?)",
-        (timestamp, original, edited, json.dumps(tags), description),
+        (timestamp, encrypt_text(original), encrypt_text(edited), json.dumps(tags), encrypt_text(description)),
     )
     conn.commit()
 
 
 def get_corrections_log() -> list[dict]:
-    """Returns the full correction history, most recent first."""
+    """Returns the full correction history, most recent first, decrypted."""
     conn = get_connection()
     rows = conn.execute("SELECT * FROM corrections_log ORDER BY id DESC").fetchall()
     results = []
     for r in rows:
         entry = dict(r)
         entry["tags"] = json.loads(entry["tags"])
+        entry["original"] = decrypt_text(entry["original"])
+        entry["edited"] = decrypt_text(entry["edited"])
+        entry["description"] = decrypt_text(entry["description"])
         results.append(entry)
     return results
 
@@ -105,16 +101,10 @@ def _extract_pattern_tags(original: str, edited: str, model_name: str) -> dict:
 
 
 def _tag_confidence(count: int) -> float:
-    # count=1 -> 0.20 (weak), count=3 -> 0.50 (promotion point), rises after that.
     return round(min(0.9, 0.05 + 0.15 * count), 2)
 
 
 def log_correction(original: str, edited: str, model_name: str) -> dict:
-    """
-    Logs one correction, updates style_corrections tallies in the profile,
-    and promotes a tag into learned_patterns once it crosses the
-    promotion threshold. Returns a summary of what happened.
-    """
     now = datetime.datetime.utcnow().isoformat() + "Z"
 
     tag_result = _extract_pattern_tags(original, edited, model_name)
