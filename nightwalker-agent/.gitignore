@@ -31,3 +31,6 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Desktop automation screenshots — ephemeral, never keep long-term
+database/_screenshots_tmp/
