@@ -24,22 +24,39 @@ This only reads a file already sitting on your own disk — it does not
 fetch, scrape, or connect to any platform. Getting your own export out
 of WhatsApp/Instagram/Telegram/etc into this format is up to you; this
 importer does not automate that step.
+
+Phase 6 addition: besides extracting personality patterns, this now
+also persists the raw messages (with their real timestamps) into
+conversation_messages, tagged memory_layer='imported_history' and
+linked to a single resolved contact. This is what gives the Phase 6
+timing engine real historical reply-delay data to learn from, instead
+of only ever falling back to config defaults.
+
+Current limitation, stated plainly: this assumes each import file is
+one 1:1 conversation with a single other person. If a file contains
+messages from multiple other participants (a group chat), they are all
+still linked to whichever non-"me" name appears most often — a real
+simplification, not a full multi-participant model. That would need
+proper group-chat handling, which hasn't been built.
 """
 
 import datetime
-import json
 import os
+from collections import Counter
 
 from agent.brain.model_manager import get_active_model
 from agent.personality.conversation_analyzer import analyze_chunk
 from agent.personality.profile_extractor import merge_into_profile
 from agent.personality.profile_store import load_profile, save_profile
 from agent.personality.sensitive_store import append_entries as append_sensitive_entries
+from database.contact_store import get_or_create_contact
+from database.memory_store import log_message
 
 CHUNK_SIZE = 30  # messages per analysis call — keeps prompts small and fast
 
 
 def load_conversation_file(path: str) -> list[dict]:
+    import json
     if not os.path.exists(path):
         raise FileNotFoundError(f"No file found at: {path}")
     with open(path, "r", encoding="utf-8") as f:
@@ -53,6 +70,35 @@ def chunk_messages(messages: list[dict], chunk_size: int = CHUNK_SIZE) -> list[l
     return [messages[i:i + chunk_size] for i in range(0, len(messages), chunk_size)]
 
 
+def _resolve_primary_contact_name(messages: list[dict]) -> str | None:
+    """Finds the most common non-'me' speaker in the file — see the
+    1:1 conversation assumption documented at the top of this file."""
+    others = [m.get("speaker") for m in messages if m.get("speaker") and m.get("speaker") != "me"]
+    if not others:
+        return None
+    return Counter(others).most_common(1)[0][0]
+
+
+def _persist_raw_messages(messages: list[dict], contact_id: int | None) -> int:
+    """Persists every message as real history rows for the timing engine to learn from later."""
+    count = 0
+    for m in messages:
+        speaker = m.get("speaker", "unknown")
+        text = m.get("text", "")
+        timestamp = m.get("timestamp")  # may be None — log_message falls back to "now" if so
+        if not text:
+            continue
+        log_message(
+            role=speaker,
+            content=text,
+            contact_id=contact_id,
+            memory_layer="imported_history",
+            created_at=timestamp,
+        )
+        count += 1
+    return count
+
+
 def run_import(path: str, progress_fn=print) -> dict:
     """
     Runs the full import pipeline for one file. Returns a summary dict.
@@ -62,6 +108,14 @@ def run_import(path: str, progress_fn=print) -> dict:
     model_name = get_active_model()
     messages = load_conversation_file(path)
     chunks = chunk_messages(messages)
+
+    contact_name = _resolve_primary_contact_name(messages)
+    contact_id = get_or_create_contact(contact_name, platform="imported") if contact_name else None
+    if contact_name:
+        progress_fn(f"Linking this import to contact: {contact_name}")
+
+    persisted_count = _persist_raw_messages(messages, contact_id)
+    progress_fn(f"Persisted {persisted_count} raw messages for timing/history analysis.")
 
     profile = load_profile()
     total_personal_knowledge = 0
@@ -100,6 +154,7 @@ def run_import(path: str, progress_fn=print) -> dict:
         "message_count": len(messages),
         "chunks_processed": len(chunks) - chunks_with_errors,
         "chunks_with_errors": chunks_with_errors,
+        "linked_contact": contact_name,
     })
     save_profile(profile)
 
@@ -109,4 +164,6 @@ def run_import(path: str, progress_fn=print) -> dict:
         "chunks_with_errors": chunks_with_errors,
         "personal_knowledge_facts_found": total_personal_knowledge,
         "sensitive_flags_found": total_sensitive_flags,
+        "linked_contact": contact_name,
+        "messages_persisted_for_history": persisted_count,
     }
