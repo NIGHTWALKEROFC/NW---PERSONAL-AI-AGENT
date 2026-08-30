@@ -10,5 +10,6 @@
       "notes": "Faster, smaller, still decent at structured/JSON output. Fallback if 7B feels slow."
     }
   ],
-  "context_length": 8192
+  "context_length": 8192,
+  "vision_model": null
 }
