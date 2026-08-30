@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}System — NightWalker{% endblock %}
+{% block content %}
+<h2>System</h2>
+
+<div class="card">
+    <h3>Resources</h3>
+    <div class="stat-grid">
+        <div class="stat"><div class="value">{{ cpu_percent }}%</div><div class="label">CPU ({{ cpu_count }} cores)</div></div>
+        <div class="stat"><div class="value">{{ ram_percent }}%</div><div class="label">RAM {{ ram_used_gb }}/{{ ram_total_gb }} GB</div></div>
+        <div class="stat"><div class="value">{{ disk_percent }}%</div><div class="label">Disk {{ disk_used_gb }}/{{ disk_total_gb }} GB</div></div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Database</h3>
+    <p>Size: <strong>{{ db_size_mb }} MB</strong> (<code>database/nightwalker.db</code>)</p>
+</div>
+
+<div class="card">
+    <h3>GPU</h3>
+    <p class="not-built">Not monitored here — check Windows Task Manager's Performance tab for live GPU/VRAM usage.</p>
+</div>
+{% endblock %}
