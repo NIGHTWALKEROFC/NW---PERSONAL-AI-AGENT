@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Tasks — NightWalker{% endblock %}
+{% block content %}
+<h2>Tasks</h2>
+<p class="not-built">The natural-language task planner isn't built yet (spec section 14) — nothing currently creates tasks automatically. This page just shows storage, in case you're testing it directly.</p>
+
+<div class="card">
+    {% if tasks %}
+    <table>
+        <tr><th>Goal</th><th>Status</th><th>Trigger</th><th>Created</th></tr>
+        {% for t in tasks %}
+        <tr>
+            <td>{{ t.goal }}</td>
+            <td><span class="badge badge-neutral">{{ t.status }}</span></td>
+            <td class="muted">{{ t.trigger_condition or '—' }}</td>
+            <td class="muted">{{ t.created_at }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="not-built">No tasks stored.</p>
+    {% endif %}
+</div>
+{% endblock %}
