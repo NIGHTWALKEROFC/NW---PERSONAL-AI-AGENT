@@ -10,6 +10,11 @@ platform-specific identifier (e.g. a Telegram chat ID) needed to
 actually send a message to that contact. Existing databases get this
 column added automatically via ALTER TABLE, since CREATE TABLE IF NOT
 EXISTS alone doesn't add columns to a table that already exists.
+
+Phase 12 addition: a new `workflows` table for teach-by-demonstration
+(spec section 13) — see database/workflow_store.py. This is a brand
+new table, not a column added to an existing one, so it needs no entry
+in _COLUMN_MIGRATIONS below.
 """
 
 import os
@@ -121,12 +126,22 @@ CREATE TABLE IF NOT EXISTS security_events (
     created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS workflows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    steps_json TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'draft',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_conversation_messages_contact ON conversation_messages(contact_id);
 CREATE INDEX IF NOT EXISTS idx_conversation_messages_layer ON conversation_messages(memory_layer);
 CREATE INDEX IF NOT EXISTS idx_contact_memories_contact ON contact_memories(contact_id);
 CREATE INDEX IF NOT EXISTS idx_temporary_memory_expires ON temporary_memory(expires_at);
 CREATE INDEX IF NOT EXISTS idx_task_memory_status ON task_memory(status);
 CREATE INDEX IF NOT EXISTS idx_pending_approvals_status ON pending_approvals(status);
+CREATE INDEX IF NOT EXISTS idx_workflows_status ON workflows(status);
 """
 
 # Columns added after a table already existed in an earlier phase —
