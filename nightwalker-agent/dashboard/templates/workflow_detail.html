@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}{{ workflow.name if workflow else 'Workflow' }} — NightWalker{% endblock %}
+{% block content %}
+{% if workflow %}
+<h2>{{ workflow.name }}</h2>
+<p class="muted">
+    Status:
+    {% if workflow.status == 'ready' %}<span class="badge badge-ok">ready</span>
+    {% elif workflow.status == 'disabled' %}<span class="badge badge-danger">disabled</span>
+    {% else %}<span class="badge badge-neutral">draft</span>{% endif %}
+    &middot; {{ workflow.steps|length }} step(s) &middot; updated {{ workflow.updated_at }}
+</p>
+
+<div class="card">
+    <h3>Steps</h3>
+    <table>
+        <tr><th>#</th><th>Action</th><th>Detail</th><th>Expected screen state</th></tr>
+        {% for step in workflow.steps %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td><span class="badge badge-neutral">{{ step.action_type }}</span></td>
+            <td>{{ step.label or step.params }}</td>
+            <td class="muted">{{ step.expected_state_description or '(none set — click/type_text will refuse to run)' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<div class="card">
+    <h3>Dry-Run Preview</h3>
+    <p class="muted">Simulates the full workflow through the exact same safety chain as real execution — nothing real happens, regardless of the master switch or this workflow's status.</p>
+    <form method="post" action="/workflows/{{ workflow.id }}/dry-run">
+        <button type="submit">Run dry-run preview</button>
+    </form>
+</div>
+
+{% if dry_run_result %}
+<div class="card">
+    <h3>Dry-Run Result</h3>
+    {% if dry_run_result.error %}
+    <p><span class="badge badge-danger">{{ dry_run_result.error }}</span></p>
+    {% else %}
+    <table>
+        <tr><th>#</th><th>Step</th><th>Result</th><th>Reason</th></tr>
+        {% for entry in dry_run_result.step_results %}
+        <tr>
+            <td>{{ entry.step_index }}</td>
+            <td>{{ entry.step.label or entry.step.action_type }}</td>
+            <td>
+                {% if entry.result.status == 'would_execute' %}<span class="badge badge-ok">{{ entry.result.status }}</span>
+                {% elif entry.result.status in ['blocked', 'stopped'] %}<span class="badge badge-danger">{{ entry.result.status }}</span>
+                {% else %}<span class="badge badge-warn">{{ entry.result.status }}</span>{% endif %}
+            </td>
+            <td class="muted">{{ entry.result.reason or '—' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% if dry_run_result.halted %}
+    <p class="muted">Halted at step {{ dry_run_result.halted_at_step }} — {{ dry_run_result.skipped_steps }} step(s) never attempted.</p>
+    {% else %}
+    <p class="muted">All steps would proceed without halting.</p>
+    {% endif %}
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+    <h3>Real execution</h3>
+    <p class="muted">Not available from this page by design. Use <code>python scripts/run_workflow_cli.py</code>, which requires a mandatory dry-run preview and an explicit typed confirmation before any real action runs.</p>
+</div>
+{% else %}
+<p class="not-built">Workflow not found.</p>
+{% endif %}
+<p><a href="/workflows" style="color:#7dd3fc;">&larr; Back to workflows</a></p>
+{% endblock %}
