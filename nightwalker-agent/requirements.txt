@@ -6,3 +6,13 @@ jinja2==3.1.4
 python-multipart==0.0.12
 psutil==6.1.0
 cryptography==43.0.3
+
+# Desktop automation (Phase 11). NOTE: these were used by
+# automation/desktop/controller.py and availability.py since Phase 11
+# but were missing from this file — a pre-existing gap fixed here in
+# Phase 12, not a new addition of Phase 11's own dependencies.
+pyautogui==0.9.54
+pygetwindow==0.0.9
+
+# Teach-by-demonstration recording (Phase 12) — automation/desktop/recorder.py
+pynput==1.8.2
