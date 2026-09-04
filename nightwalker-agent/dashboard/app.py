@@ -9,9 +9,16 @@ Security (audit screen + kill switch) are now real, working pages —
 previously the old Timing page carried a placeholder note about
 security; that functionality now lives properly on /security.
 
-Still not built, honestly labeled in the nav: Platforms, Automations,
-Scheduler, formal privacy-conscious Logs (spec section 25 — distinct
-from the security event log that DOES exist now).
+Phase 12 fix: automation_router (Phase 11's desktop automation page —
+dashboard/routers/automation_router.py, templates/automation.html) was
+written back in Phase 11 but never actually registered here, so
+/automation and its endpoints have been 404ing since Phase 11 despite
+the nav linking to them and the page working code being fully present.
+Fixed here, alongside registering the new workflows_router (Phase 12).
+
+Still not built, honestly labeled in the nav: Scheduler, formal
+privacy-conscious Logs (spec section 25 — distinct from the security
+event log that DOES exist now).
 """
 
 import os
@@ -23,7 +30,7 @@ from fastapi.templating import Jinja2Templates
 from dashboard.routers import (
     home, personality, memory, contacts, tasks, model_router,
     timing_router, system_router, permissions, approvals, security_router,
-    simulation_router, platforms_router,
+    simulation_router, platforms_router, automation_router, workflows_router,
 )
 
 BASE_DIR = os.path.dirname(__file__)
@@ -47,3 +54,5 @@ app.include_router(approvals.get_router(templates))
 app.include_router(security_router.get_router(templates))
 app.include_router(simulation_router.get_router(templates))
 app.include_router(platforms_router.get_router(templates))
+app.include_router(automation_router.get_router(templates))
+app.include_router(workflows_router.get_router(templates))
