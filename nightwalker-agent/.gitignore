@@ -2,6 +2,7 @@
 .env
 *.key
 *.pem
+*.crt
 database/secret.key
 
 # Private agent data — never commit
