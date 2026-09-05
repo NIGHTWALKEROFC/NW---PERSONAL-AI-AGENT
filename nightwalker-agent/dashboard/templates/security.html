@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Security — NightWalker{% endblock %}
+{% block content %}
+<h2>Security</h2>
+
+<div class="card">
+    <h3>Kill Switch</h3>
+    <p class="muted">Stops what can actually be stopped right now: pauses the timing engine, disables outgoing replies, and logs out every dashboard session. Does not stop schedulers — none exists yet.</p>
+    {% if kill_switch_active %}
+    <p><span class="badge badge-danger">ACTIVE</span></p>
+    <form method="post" action="/security/kill-switch/deactivate">
+        <button type="submit">Deactivate &amp; restore previous settings</button>
+    </form>
+    {% else %}
+    <form method="post" action="/security/kill-switch/activate" onsubmit="return confirm('This will pause the agent, disable outgoing replies, and log out every device. Continue?');">
+        <button type="submit" class="danger">STOP EVERYTHING</button>
+    </form>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Active Sessions (devices logged in)</h3>
+    {% if not auth_enabled %}
+    <p class="not-built">No password is set — the dashboard has no login yet, so there are no sessions to show. Run <code>python scripts/set_dashboard_password.py</code> to turn this on (needed for safe multi-device access).</p>
+    {% elif sessions %}
+    <table>
+        <tr><th>Device</th><th>Logged in</th><th>Last seen</th><th>Expires</th><th></th></tr>
+        {% for s in sessions %}
+        <tr>
+            <td>{{ s.device_label }}</td>
+            <td class="muted">{{ s.created_at }}</td>
+            <td class="muted">{{ s.last_seen_at }}</td>
+            <td class="muted">{{ s.expires_at }}</td>
+            <td>
+                <form method="post" action="/security/sessions/{{ s.session_id }}/revoke" style="display:inline;">
+                    <button type="submit">Log out</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <form method="post" action="/security/sessions/revoke-all" onsubmit="return confirm('Log out every device, including this one?');" style="margin-top:12px;">
+        <button type="submit" class="danger">Log out all devices</button>
+    </form>
+    {% else %}
+    <p class="not-built">No active sessions.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Encryption</h3>
+    <p>Database file: {% if db_exists %}<span class="badge badge-ok">exists</span>{% else %}<span class="badge badge-neutral">not created yet</span>{% endif %}</p>
+    <p>Encryption key: {% if key_exists %}<span class="badge badge-ok">present</span>{% else %}<span class="badge badge-neutral">not created yet</span>{% endif %}</p>
+    <p class="muted">Sensitive content fields are encrypted at rest using this key. This protects the database file if copied in isolation — not if someone has both the .db and the key file. See <code>database/crypto.py</code> for full detail.</p>
+</div>
+
+<div class="card">
+    <h3>Credentials Stored</h3>
+    <p class="not-built">None — no platform connectors exist yet that would need stored credentials (Phase 10).</p>
+</div>
+
+<div class="card">
+    <h3>External Connections</h3>
+    <p class="not-built">None — this agent only talks to your local Ollama instance. No platform connectors exist yet.</p>
+</div>
+
+<div class="card">
+    <h3>Permissions</h3>
+    <p>Manage action-level permissions on the <a href="/permissions" style="color:#7dd3fc;">Permissions page</a>.</p>
+</div>
+
+<div class="card">
+    <h3>Recent Security Events</h3>
+    {% if events %}
+    <table>
+        {% for e in events %}
+        <tr><td class="muted">{{ e.created_at }}</td><td><span class="badge badge-neutral">{{ e.event_type }}</span></td><td>{{ e.detail }}</td></tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="not-built">No security events logged yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
