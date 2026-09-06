@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Scheduler — NightWalker{% endblock %}
+{% block content %}
+<h2>Scheduler</h2>
+<p class="muted">Background housekeeping jobs — pure local database hygiene (expired sessions, old login attempts, consumed webhook queue rows, overdue tasks). None of these send a message or contact a platform, so they run independently of permissions and timing. The kill switch on the <a href="/security" style="color:#7dd3fc;">Security page</a> stops this whole scheduler along with everything else.</p>
+
+<div class="card">
+    <h3>Status</h3>
+    <p>{% if running %}<span class="badge badge-ok">running</span>{% else %}<span class="badge badge-danger">stopped</span>{% endif %}</p>
+    <form method="post" action="/scheduler/start" style="display:inline;">
+        <button type="submit" {% if running %}disabled{% endif %}>Start</button>
+    </form>
+    <form method="post" action="/scheduler/stop" style="display:inline;">
+        <button type="submit" {% if not running %}disabled{% endif %}>Stop</button>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Registered Jobs</h3>
+    {% if jobs %}
+    <table>
+        <tr><th>Job</th><th>Interval</th><th>Last run</th><th>Runs</th><th>Last result</th><th></th></tr>
+        {% for job in jobs %}
+        <tr>
+            <td>{{ job.name }}</td>
+            <td class="muted">every {{ job.interval_seconds }}s</td>
+            <td class="muted">{{ job.last_run_at or "never" }}</td>
+            <td class="muted">{{ job.run_count }}</td>
+            <td>
+                {% if job.last_error %}<span class="badge badge-danger">{{ job.last_error }}</span>
+                {% elif job.last_result %}<span class="badge badge-ok">{{ job.last_result }}</span>
+                {% else %}<span class="badge badge-neutral">not run yet</span>{% endif %}
+            </td>
+            <td>
+                <form method="post" action="/scheduler/jobs/{{ job.name }}/run-now">
+                    <button type="submit">Run now</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p class="not-built">No jobs registered — the scheduler process may not have started yet.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>What this does NOT do</h3>
+    <p class="muted">This does not interpret task_memory's <code>schedule</code> or <code>trigger_condition</code> fields (e.g. "watch this conversation and let me know") — that requires a natural-language task planner (spec section 14) that doesn't exist yet. The one task_memory field this scheduler acts on is <code>expires_at</code>, sweeping overdue tasks to "expired".</p>
+</div>
+{% endblock %}
